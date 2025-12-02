@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import Card from './Card';
 import { DocumentTextIcon, SparklesIcon } from './icons';
@@ -54,10 +53,15 @@ const PastPapersList: React.FC<PastPapersListProps> = ({ level, onStartExam, isP
     }, [levelPapers, selectedSubject, selectedYear, selectedType]);
     
     const papersGroupedBySubject = useMemo(() => {
-        return filteredPapers.reduce((acc, paper) => {
-            (acc[paper.subject] = acc[paper.subject] || []).push(paper);
-            return acc;
-        }, {} as Record<string, Exam[]>);
+        // FIX: Rewrote reduce to a clearer for-loop to ensure proper type inference.
+        const groups: Record<string, Exam[]> = {};
+        for (const paper of filteredPapers) {
+            if (!groups[paper.subject]) {
+                groups[paper.subject] = [];
+            }
+            groups[paper.subject].push(paper);
+        }
+        return groups;
     }, [filteredPapers]);
 
     const handleLevelChange = (lvl: EducationLevel) => {

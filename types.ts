@@ -1,4 +1,3 @@
-
 export type EducationLevel = 'PLE' | 'UCE' | 'UACE';
 export type UserRole = 'student' | 'parent' | 'school' | 'admin';
 export type ExamMode = 'practice' | 'simulation';
@@ -71,6 +70,7 @@ export interface QuestionPart {
   marks: number;
   answer: string;
   explanation?: string;
+  answerType?: 'text' | 'numeric' | 'open-ended';
 }
 
 export interface QuestionTable {

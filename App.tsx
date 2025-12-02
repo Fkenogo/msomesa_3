@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import StudentDashboard from './pages/StudentDashboard';
 import ParentDashboard from './pages/ParentDashboard';
@@ -17,133 +16,29 @@ import ExamListPage from './pages/ExamListPage';
 
 type PublicPage = 'landing' | 'past-papers' | 'practice-papers' | 'pricing';
 
-// Deep merge utility to properly preserve nested objects and arrays
-function deepMerge<T>(target: T, source: T): T {
-    // If source is null/undefined, return target
-    if (source === null || source === undefined) {
-        return target;
-    }
-
-    // If target is null/undefined, return source
-    if (target === null || target === undefined) {
-        return source;
-    }
-
-    // For primitive types, source wins
-    if (typeof source !== 'object' || Array.isArray(source)) {
-        return source;
-    }
-
-    // For objects, merge recursively
-    const result = { ...target } as any;
-
-    for (const key in source) {
-        if (source.hasOwnProperty(key)) {
-            const sourceValue = (source as any)[key];
-            const targetValue = (target as any)[key];
-
-            // If source value is an array, always use it (don't merge arrays)
-            if (Array.isArray(sourceValue)) {
-                result[key] = sourceValue;
-            }
-            // If both are objects, merge recursively
-            else if (
-                typeof sourceValue === 'object' &&
-                sourceValue !== null &&
-                typeof targetValue === 'object' &&
-                targetValue !== null &&
-                !Array.isArray(targetValue)
-            ) {
-                result[key] = deepMerge(targetValue, sourceValue);
-            }
-            // Otherwise, source value wins
-            else {
-                result[key] = sourceValue;
-            }
-        }
-    }
-
-    return result as T;
-}
-
 // Custom hook to persist state in localStorage
 function usePersistentState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
     const [state, setState] = useState<T>(() => {
         try {
             const storedValue = window.localStorage.getItem(key);
             if (storedValue) {
-                const parsed = JSON.parse(storedValue);
-                // Create a backup before returning
-                try {
-                    window.localStorage.setItem(`${key}_backup`, storedValue);
-                } catch (backupError) {
-                    console.warn(`Could not create backup for "${key}"`, backupError);
-                }
-                return parsed;
+                return JSON.parse(storedValue);
             }
             return defaultValue;
         } catch (error) {
-            console.error(`⚠️ ERROR parsing localStorage key "${key}":`, error);
+            console.error(`Error parsing localStorage key “${key}”:`, error);
             console.log(`Corrupted value for key "${key}" was:`, window.localStorage.getItem(key));
-
-            // ❌ DO NOT DELETE DATA! Try to recover from backup instead
-            try {
-                const backupValue = window.localStorage.getItem(`${key}_backup`);
-                if (backupValue) {
-                    console.log(`✅ Attempting to restore from backup for key "${key}"`);
-                    const backupParsed = JSON.parse(backupValue);
-                    // Restore the backup to main storage
-                    window.localStorage.setItem(key, backupValue);
-                    alert(`Data restored from backup for ${key}. Some recent changes may have been lost.`);
-                    return backupParsed;
-                }
-            } catch (backupError) {
-                console.error(`Failed to restore from backup for "${key}":`, backupError);
-            }
-
-            // Only if backup fails, move corrupted data to a recovery key instead of deleting
-            try {
-                const corruptedData = window.localStorage.getItem(key);
-                if (corruptedData) {
-                    window.localStorage.setItem(`${key}_corrupted_${Date.now()}`, corruptedData);
-                    console.log(`Corrupted data saved to recovery key for manual inspection`);
-                }
-            } catch (e) {
-                console.error('Could not save corrupted data', e);
-            }
-
-            window.localStorage.removeItem(key);
-            alert(`⚠️ Data loading error for ${key}. Using defaults. Please contact support if data is missing.`);
+            // Deleting the corrupted value to prevent future errors on load
+            window.localStorage.removeItem(key); 
             return defaultValue;
         }
     });
 
     useEffect(() => {
         try {
-            const dataToStore = JSON.stringify(state);
-
-            // Check localStorage quota before saving
-            const estimatedSize = new Blob([dataToStore]).size;
-            if (estimatedSize > 4.5 * 1024 * 1024) { // Warn if approaching 5MB limit
-                console.warn(`⚠️ Large data size for "${key}": ${(estimatedSize / 1024 / 1024).toFixed(2)}MB`);
-                alert(`Warning: Data size is getting large. Consider exporting your data as a backup.`);
-            }
-
-            window.localStorage.setItem(key, dataToStore);
-
-            // Update backup periodically (every save for critical data)
-            if (key.includes('users') || key.includes('exams')) {
-                try {
-                    window.localStorage.setItem(`${key}_backup`, dataToStore);
-                } catch (backupError) {
-                    console.warn(`Could not update backup for "${key}"`, backupError);
-                }
-            }
+            window.localStorage.setItem(key, JSON.stringify(state));
         } catch (error) {
-            console.error(`❌ Error setting localStorage key "${key}":`, error);
-            if (error instanceof Error && error.name === 'QuotaExceededError') {
-                alert('⚠️ Storage quota exceeded! Your data may not be saved. Please export your data and contact support.');
-            }
+            console.error(`Error setting localStorage key “${key}”:`, error);
         }
     }, [key, state]);
 
@@ -172,61 +67,50 @@ const App: React.FC = () => {
   const [authView, setAuthView] = useState<'landing' | 'login'>(currentUser ? 'login' : 'landing');
   const [publicPage, setPublicPage] = useState<PublicPage>('landing');
   
-  // --- Data Reconciliation Hooks ---
+  // --- Data Reconciliation Hook ---
   // This robust logic runs once on mount to synchronize stored data with the base mock data.
   // It ensures that user-created data is always preserved, updates to mock data are applied safely
   // without overwriting user changes, and mock items deleted by the user stay deleted.
   useEffect(() => {
+    // --- Reconcile Users ---
     setUsers(currentStoredUsers => {
-        const storedUsersMap = new Map(currentStoredUsers.map(u => [u.id, u]));
+        // Start with the baseline mock data as a Map
+        const finalUsersMap = new Map(mockUsers.map(u => [u.id, u]));
 
-        mockUsers.forEach(mockUser => {
-            // If a mock user was explicitly deleted by an admin, ensure it stays deleted.
-            if (deletedMockUserIds.includes(mockUser.id)) {
-                if (storedUsersMap.has(mockUser.id)) {
-                    storedUsersMap.delete(mockUser.id);
-                }
-                return; // Continue to next mock user
-            }
-
-            const storedUser = storedUsersMap.get(mockUser.id);
-            if (storedUser) {
-                // Use deep merge to preserve nested data structures
-                // storedUser data takes precedence over mockUser to preserve edits
-                const updatedUser = deepMerge(mockUser, storedUser);
-                storedUsersMap.set(mockUser.id, updatedUser);
+        // Layer the stored data on top
+        currentStoredUsers.forEach(storedUser => {
+            const mockUser = finalUsersMap.get(storedUser.id);
+            if (mockUser) {
+                // This is a mock user that also exists in storage. Merge, with stored data taking precedence.
+                finalUsersMap.set(storedUser.id, { ...mockUser, ...storedUser });
             } else {
-                // If mock user doesn't exist in storage, add it.
-                storedUsersMap.set(mockUser.id, mockUser);
+                // This is a user-created user, not in mock data. Add it directly.
+                finalUsersMap.set(storedUser.id, storedUser);
             }
         });
 
-        return Array.from(storedUsersMap.values());
+        // Ensure any mock users explicitly deleted by an admin stay deleted
+        deletedMockUserIds.forEach(id => finalUsersMap.delete(id));
+
+        return Array.from(finalUsersMap.values());
     });
 
+    // --- Reconcile Exams ---
     setExamsData(currentStoredExams => {
-        const storedExamsMap = new Map(currentStoredExams.map(e => [e.id, e]));
+        const finalExamsMap = new Map(mockExams.map(e => [e.id, e]));
 
-        mockExams.forEach(mockExam => {
-            if (deletedMockExamIds.includes(mockExam.id)) {
-                if (storedExamsMap.has(mockExam.id)) {
-                   storedExamsMap.delete(mockExam.id);
-                }
-                return;
-            }
-
-            const storedExam = storedExamsMap.get(mockExam.id);
-            if (storedExam) {
-                 // Use deep merge to preserve nested arrays like questions with imageUrls
-                 // storedExam data (admin edits) takes precedence over mockExam
-                 const updatedExam = deepMerge(mockExam, storedExam);
-                 storedExamsMap.set(mockExam.id, updatedExam);
+        currentStoredExams.forEach(storedExam => {
+            const mockExam = finalExamsMap.get(storedExam.id);
+            if (mockExam) {
+                finalExamsMap.set(storedExam.id, { ...mockExam, ...storedExam });
             } else {
-                storedExamsMap.set(mockExam.id, mockExam);
+                finalExamsMap.set(storedExam.id, storedExam);
             }
         });
 
-        return Array.from(storedExamsMap.values());
+        deletedMockExamIds.forEach(id => finalExamsMap.delete(id));
+        
+        return Array.from(finalExamsMap.values());
     });
   }, []); // IMPORTANT: Empty dependency array ensures this runs only once on initial app load.
 
@@ -550,34 +434,7 @@ const App: React.FC = () => {
           alert('Exam successfully deleted.');
       }
   };
-
-  const handleImportData = (importedUsers: User[], importedExams: Exam[]) => {
-      try {
-          // Merge imported users with existing users
-          setUsers(prevUsers => {
-              const userMap = new Map(prevUsers.map(u => [u.id, u]));
-              importedUsers.forEach(importedUser => {
-                  userMap.set(importedUser.id, importedUser); // Imported data overwrites existing
-              });
-              return Array.from(userMap.values());
-          });
-
-          // Merge imported exams with existing exams
-          setExamsData(prevExams => {
-              const examMap = new Map(prevExams.map(e => [e.id, e]));
-              importedExams.forEach(importedExam => {
-                  examMap.set(importedExam.id, importedExam); // Imported data overwrites existing
-              });
-              return Array.from(examMap.values());
-          });
-
-          alert('✅ Data imported successfully!');
-      } catch (error) {
-          console.error('Import error:', error);
-          alert('❌ Failed to import data. Please check the console for details.');
-      }
-  };
-
+  
   const handleSaveReminders = (reminders: StudyReminder[]) => {
       setCurrentUser(prev => prev ? { ...prev, studyReminders: reminders } : null);
   };
@@ -641,6 +498,7 @@ const App: React.FC = () => {
       case 'student':
         dashboardContent = <StudentDashboard 
             currentUser={viewUser} 
+            originalRole={currentUser.role}
             onStartExam={handleStartExam}
             onStartReviewSession={handleStartReviewSession}
             onSaveReminders={handleSaveReminders}
@@ -655,22 +513,22 @@ const App: React.FC = () => {
         dashboardContent = <SchoolDashboard currentUser={viewUser} {...sharedProps}/>;
         break;
       case 'admin':
-         dashboardContent = <SuperAdminDashboard
+         dashboardContent = <SuperAdminDashboard 
                     currentUser={currentUser}
-                    exams={examsData}
-                    onPdfUpload={handlePdfUpload}
+                    exams={examsData} 
+                    onPdfUpload={handlePdfUpload} 
                     allUsers={users}
                     onSaveUser={handleSaveUser}
                     onDeleteUser={handleDeleteUser}
                     onSaveExam={handleSaveExam}
                     onDeleteExam={handleDeleteExam}
                     onPreviewExam={handlePreviewExam}
-                    onImportData={handleImportData}
                 />;
         break;
       default:
         dashboardContent = <StudentDashboard 
             currentUser={currentUser} 
+            originalRole={currentUser.role}
             onStartExam={handleStartExam} 
             onStartReviewSession={handleStartReviewSession}
             onSaveReminders={handleSaveReminders}

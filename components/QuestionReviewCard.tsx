@@ -1,9 +1,9 @@
-
 import React, { useState, useCallback } from 'react';
 import { Question, QuestionPart } from '../types';
 import Card from './Card';
 import { SparklesIcon, CheckCircleIcon, XCircleIcon } from './icons';
 import { getAIExplanation, generateImageFromDescription, getIncorrectAnswerFeedback } from '../services/geminiService';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface QuestionReviewCardProps {
     question: Question;
@@ -78,28 +78,28 @@ const PartReview: React.FC<{ part: QuestionPart; userAnswer: string; questionTex
                 </div>
             )}
 
-            <div className="prose prose-sm mt-4 p-4 bg-gray-50 rounded-lg whitespace-pre-wrap max-w-none">
-                <h4 className="font-bold text-gray-700 not-prose mb-2">Explanation</h4>
-                <p>{part.explanation || "No standard explanation provided for this question."}</p>
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-bold text-gray-700 mb-2">Explanation</h4>
+                <MarkdownRenderer text={part.explanation || "No standard explanation provided for this question."} />
             </div>
 
             <div className="mt-4 text-sm flex items-center gap-4 flex-wrap">
                 <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchAiExplanation(); }}>
-                    <summary className="cursor-pointer font-semibold text-sky-700 hover:text-sky-800 flex items-center gap-1">
-                        <SparklesIcon className="w-4 h-4" /> Need a better explanation? Ask AI Tutor
+                    <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer animate-pulse-slow list-none">
+                        <SparklesIcon className="w-5 h-5" /> Need a better explanation? Ask AI Tutor
                     </summary>
-                    <div className="prose prose-sm mt-2 p-4 bg-sky-50 rounded-lg whitespace-pre-wrap max-w-none">
-                        {isLoadingAiExplanation ? "Loading AI explanation..." : (aiExplanation || 'Click to load AI explanation.')}
+                    <div className="mt-2 p-4 bg-sky-50 rounded-lg">
+                        {isLoadingAiExplanation ? "Loading AI explanation..." : <MarkdownRenderer text={aiExplanation} />}
                     </div>
                 </details>
 
                 {!isCorrect && (
                     <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchIncorrectFeedback(); }}>
-                        <summary className="cursor-pointer font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1">
-                             <SparklesIcon className="w-4 h-4" /> Why was my answer wrong?
+                        <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer list-none">
+                             <SparklesIcon className="w-5 h-5" /> Why was my answer wrong?
                         </summary>
-                         <div className="prose prose-sm mt-2 p-4 bg-orange-50 rounded-lg whitespace-pre-wrap max-w-none">
-                             {isLoadingFeedback ? "Loading personalized feedback..." : (feedback || 'Click to load feedback.')}
+                         <div className="mt-2 p-4 bg-orange-50 rounded-lg">
+                             {isLoadingFeedback ? "Loading personalized feedback..." : <MarkdownRenderer text={feedback} />}
                         </div>
                     </details>
                 )}
@@ -115,7 +115,7 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({ question, userA
     return (
         <Card className="mb-4">
             <div className="prose max-w-none">
-                <p className="font-bold text-gray-900 text-lg">{question.questionNumber}. {question.text}</p>
+                <MarkdownRenderer text={`**Q${question.questionNumber}:** ${question.text}`} />
                 
                 {(question.imageUrl || generatedImageUrl) && (
                     <div className="my-4 border rounded-md p-2 flex justify-center bg-gray-50">

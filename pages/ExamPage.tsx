@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Exam, Question, ExamMode, QuestionPart } from '../types';
 import Card from '../components/Card';
 import QuestionReviewCard from '../components/QuestionReviewCard';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, XCircleIcon, EyeIcon, SparklesIcon } from '../components/icons';
-import { getAIExplanation, getIncorrectAnswerFeedback } from '../services/geminiService';
+import { getAIExplanation, getIncorrectAnswerFeedback, checkAnswerWithAI } from '../services/geminiService';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 // --- Practice Mode Part Component ---
 const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolean) => void; questionText: string; pdfSummary?: string }> = ({ part, onAttempt, questionText, pdfSummary }) => {
@@ -16,16 +16,54 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
     const [isLoadingAiExplanation, setIsLoadingAiExplanation] = useState(false);
     const [feedback, setFeedback] = useState<string | null>(null);
     const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
+    const [aiCheckFeedback, setAiCheckFeedback] = useState<string | null>(null);
+    const [showOpenEnded, setShowOpenEnded] = useState(false);
 
-    const handleCheckAnswer = () => {
+    const handleCheckAnswer = async () => {
         if (!userAnswer.trim()) {
             alert("Please enter an answer.");
             return;
         }
-        const correct = userAnswer.trim().toLowerCase() === part.answer.trim().toLowerCase();
-        setIsCorrect(correct);
-        setIsAttempted(true);
-        onAttempt(correct);
+
+        setIsChecking(true);
+        setAiCheckFeedback(null);
+
+        // 1. Quick local check for an exact match (fast path)
+        const isExactMatch = userAnswer.trim().toLowerCase() === part.answer.trim().toLowerCase();
+        if (isExactMatch) {
+            setIsCorrect(true);
+            setIsAttempted(true);
+            onAttempt(true);
+            setIsChecking(false);
+            return;
+        }
+
+        // 2. If no exact match, use AI for semantic check
+        try {
+            const result = await checkAnswerWithAI(
+                `${questionText} ${part.text}`, 
+                part.answer, 
+                userAnswer, 
+                part.explanation || ''
+            );
+            
+            setIsCorrect(result.isCorrect);
+            setAiCheckFeedback(result.feedback);
+            setIsAttempted(true);
+            onAttempt(result.isCorrect);
+
+        } catch (error) {
+            // Fallback to strict checking if AI fails
+            console.error("AI check failed, falling back to strict check", error);
+            const isStrictlyCorrect = userAnswer.trim().toLowerCase() === part.answer.trim().toLowerCase();
+            setIsCorrect(isStrictlyCorrect);
+            setAiCheckFeedback("AI check failed. Your answer was compared literally.");
+            setIsAttempted(true);
+            onAttempt(isStrictlyCorrect);
+        } finally {
+            setIsChecking(false);
+        }
     };
     
     const fetchAiExplanation = useCallback(async () => {
@@ -56,6 +94,28 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
         }
     }, [feedback, part, userAnswer, questionText]);
 
+    if (part.answerType === 'open-ended') {
+        return (
+             <div key={part.id} className="mt-4 border-t pt-4">
+                <p className="text-sm font-medium text-gray-700 mb-1">{part.text}</p>
+                {!showOpenEnded && (
+                    <button onClick={() => setShowOpenEnded(true)} className="bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg text-sm">
+                        Reveal Model Answer
+                    </button>
+                )}
+                {showOpenEnded && (
+                    <div className="mt-3 text-sm animate-fade-in">
+                        <div className="p-4 bg-gray-50 rounded-lg max-w-none">
+                            <h4 className="font-bold text-gray-700 mb-2">Model Answer & Explanation</h4>
+                            <MarkdownRenderer text={part.explanation || "No explanation provided."} />
+                        </div>
+                    </div>
+                )}
+                <style>{`@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } } .animate-fade-in { animation: fade-in 0.5s ease; }`}</style>
+            </div>
+        )
+    }
+
     return (
         <div key={part.id} className="mt-4 border-t pt-4">
             <label htmlFor={`answer-${part.id}`} className="block text-sm font-medium text-gray-700 mb-1">{part.text}</label>
@@ -65,12 +125,24 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
                     type="text"
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
-                    disabled={isAttempted}
+                    disabled={isAttempted || isChecking}
                     className="mt-1 w-full sm:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 disabled:bg-gray-100"
                 />
-                {!isAttempted && <button onClick={handleCheckAnswer} className="bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg text-sm">Check</button>}
+                {!isAttempted && 
+                    <button onClick={handleCheckAnswer} disabled={isChecking} className="bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:bg-sky-300 w-24 text-center">
+                        {isChecking ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        ) : 'Check'}
+                    </button>
+                }
                 {isAttempted && (isCorrect ? <CheckCircleIcon className="w-7 h-7 text-green-500"/> : <XCircleIcon className="w-7 h-7 text-red-500"/>)}
             </div>
+
+            {aiCheckFeedback && (
+                <div className={`mt-2 text-xs p-2 rounded-md ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <strong>AI Marker:</strong> {aiCheckFeedback}
+                </div>
+            )}
 
             {isAttempted && (
                 <div className="mt-3 text-sm" >
@@ -78,30 +150,32 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
                         <p className="font-semibold mb-3">Correct Answer: <span className="font-mono bg-green-100 text-green-800 px-1 rounded">{part.answer}</span></p>
                     )}
 
-                    <div className="prose prose-sm p-4 bg-gray-50 rounded-lg whitespace-pre-wrap max-w-none">
+                    <div className="p-4 bg-gray-50 rounded-lg">
                         <h4 className="font-bold text-gray-700 not-prose mb-2">Explanation</h4>
-                        <p>{part.explanation || "No standard explanation provided for this question."}</p>
+                        <MarkdownRenderer text={part.explanation} />
                     </div>
                     
-                    <details className="mt-2" onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchAiExplanation(); }}>
-                        <summary className="cursor-pointer font-semibold text-sky-700 hover:text-sky-800 flex items-center gap-1">
-                            <SparklesIcon className="w-4 h-4" /> Need a better explanation? Ask AI Tutor
-                        </summary>
-                        <div className="prose prose-sm mt-2 p-4 bg-sky-50 rounded-lg whitespace-pre-wrap max-w-none">
-                            {isLoadingAiExplanation ? "Loading AI explanation..." : (aiExplanation || 'Click to load AI explanation.')}
-                        </div>
-                    </details>
-
-                    {!isCorrect && (
-                        <details className="mt-2" onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchIncorrectFeedback(); }}>
-                            <summary className="cursor-pointer font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1">
-                                <SparklesIcon className="w-4 h-4" /> Why was my answer wrong?
+                    <div className="mt-4 flex flex-wrap gap-4">
+                        <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchAiExplanation(); }}>
+                            <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer animate-pulse-slow list-none">
+                                <SparklesIcon className="w-5 h-5" /> Need a better explanation? Ask AI Tutor
                             </summary>
-                            <div className="prose prose-sm mt-2 p-4 bg-orange-50 rounded-lg whitespace-pre-wrap max-w-none">
-                                {isLoadingFeedback ? "Loading personalized feedback..." : (feedback || 'Click to load feedback.')}
+                            <div className="mt-2 p-4 bg-sky-50 rounded-lg">
+                                {isLoadingAiExplanation ? "Loading AI explanation..." : <MarkdownRenderer text={aiExplanation} />}
                             </div>
                         </details>
-                    )}
+
+                        {!isCorrect && (
+                            <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchIncorrectFeedback(); }}>
+                                <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer list-none">
+                                    <SparklesIcon className="w-5 h-5" /> Why was my answer wrong?
+                                </summary>
+                                <div className="mt-2 p-4 bg-orange-50 rounded-lg">
+                                    {isLoadingFeedback ? "Loading personalized feedback..." : <MarkdownRenderer text={feedback} />}
+                                </div>
+                            </details>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -192,7 +266,8 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
         let correctCount = 0;
         questions.forEach(q => {
             q.parts.forEach(p => {
-                if (userAnswers[p.id]?.trim().toLowerCase() === p.answer.trim().toLowerCase()) {
+                // FIX: Handle case where userAnswers[p.id] is undefined by providing a default empty string.
+                if ((userAnswers[p.id] || '').trim().toLowerCase() === p.answer.trim().toLowerCase()) {
                     correctCount++;
                 }
             });
@@ -331,7 +406,7 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
                     Question {currentQnIndex + 1} of {questions.length}
                 </div>
                 <div className="prose max-w-none">
-                    {currentQuestion.text && <p className="font-semibold text-lg">{currentQuestion.text}</p>}
+                    {currentQuestion.text && <MarkdownRenderer text={currentQuestion.text} />}
                     {currentQuestion.imageUrl && <img src={currentQuestion.imageUrl} alt="Question illustration" className="my-4 rounded-md border" />}
                     {currentQuestion.table && (
                          <div className="my-4 overflow-x-auto">

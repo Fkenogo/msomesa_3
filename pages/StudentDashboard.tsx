@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import QuickStats from '../components/QuickStats';
 import RecentActivity from '../components/RecentActivity';
@@ -9,11 +8,12 @@ import PastPapersList from '../components/PastPapersList';
 import AchievementsCard from '../components/AchievementsCard';
 import SpacedRepetitionCard from '../components/SpacedRepetitionCard';
 import StudyRemindersCard from '../components/StudyRemindersCard';
-import { User, LinkRequest, LinkedAccount, Notification, Exam, ExamMode, StudyReminder } from '../types';
+import { User, LinkRequest, LinkedAccount, Notification, Exam, ExamMode, StudyReminder, UserRole } from '../types';
 import { SparklesIcon } from '../components/icons';
 
 interface StudentDashboardProps {
     currentUser: User;
+    originalRole?: UserRole;
     onStartExam: (examId: string, mode: ExamMode) => void;
     onStartReviewSession: (exam: Exam) => void;
     onSaveReminders: (reminders: StudyReminder[]) => void;
@@ -28,9 +28,14 @@ interface StudentDashboardProps {
 }
 
 const StudentDashboard: React.FC<StudentDashboardProps> = (props) => {
-  const { currentUser, onStartExam, allExams, onStartReviewSession, onSaveReminders } = props;
+  const { currentUser, onStartExam, allExams, onStartReviewSession, onSaveReminders, originalRole } = props;
 
   const isPremium = useMemo(() => {
+    // Admin override: If the original user is an admin, they have premium access in any view.
+    if (originalRole === 'admin') {
+        return true;
+    }
+
     const parentLink = props.linkedAccounts.find(l => 
         (l.userId1 === currentUser.id || l.userId2 === currentUser.id)
     );
@@ -40,7 +45,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = (props) => {
     const parent = props.allUsers.find(u => u.id === parentId);
 
     return parent?.subscription?.plan === 'Premium';
-  }, [props.linkedAccounts, props.allUsers, currentUser.id]);
+  }, [props.linkedAccounts, props.allUsers, currentUser.id, originalRole]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">

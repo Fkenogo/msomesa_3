@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+import React, 'react';
+import { useState, useMemo } from 'react';
 import Card from './Card';
 import { LinkIcon, UserCircleIcon } from './icons';
 import { User, LinkRequest, LinkedAccount, UserRole } from '../types';
