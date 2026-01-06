@@ -9,7 +9,7 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-export const getAIExplanation = async (questionText: string, correctAnswer: string, existingExplanation?: string, pdfContent?: string): Promise<string> => {
+export const getAIExplanation = async (questionText: string, correctAnswer: string, existingExplanation?: string, pdfContent?: string, userAnswer?: string): Promise<string> => {
   if (!API_KEY) {
     return "AI-powered explanations are currently unavailable. Please check the API key configuration.";
   }
@@ -25,6 +25,15 @@ export const getAIExplanation = async (questionText: string, correctAnswer: stri
       `
       : "";
 
+    const userContext = userAnswer 
+      ? `
+      **Student's Incorrect Answer:** "${userAnswer}"
+      
+      **Crucial Instruction:** 
+      The student provided the answer above, which is incorrect. In your explanation, specifically address *why* this specific answer might be wrong (e.g., did they miss a step, make a common calculation error, or misunderstand a term?). Contrast their answer with the correct one.
+      `
+      : "";
+
     const prompt = `
       You are an expert Msomesa AI Tutor, specializing in the Ugandan national examinations curriculum (PLE, UCE, and UACE). Your tone should be encouraging, clear, and conversational, like a friendly teacher guiding a student.
 
@@ -32,6 +41,8 @@ export const getAIExplanation = async (questionText: string, correctAnswer: stri
 
       **Question:** "${questionText}"
       **Correct Answer:** "${correctAnswer}"
+
+      ${userContext}
 
       Here is the existing, correct explanation which you should use as a foundation for your response:
       **Reference Explanation:**

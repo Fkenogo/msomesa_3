@@ -130,7 +130,8 @@ const PastPapersList: React.FC<PastPapersListProps> = ({ level, onStartExam, isP
                     <div key={subject} className="mb-6">
                         <h3 className="font-bold text-lg text-gray-700 mb-2">{subject}</h3>
                         <ul className="divide-y divide-gray-200">
-                            {papers.map(paper => {
+                            {/* FIX: Explicitly cast `papers` to `Exam[]` to resolve potential type inference issue with `Object.entries`. */}
+                            {(papers as Exam[]).map(paper => {
                                 const isLocked = !paper.isFree && !isPremium;
                                 return (
                                 <li key={paper.id} className="py-4 flex flex-col sm:flex-row justify-between sm:items-center">

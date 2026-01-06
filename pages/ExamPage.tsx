@@ -7,7 +7,7 @@ import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, XCircleIcon, EyeIco
 import { getAIExplanation, getIncorrectAnswerFeedback, checkAnswerWithAI } from '../services/geminiService';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
-// --- Practice Mode Part Component ---
+// --- Practice/Quiz Mode Part Component ---
 const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolean) => void; questionText: string; pdfSummary?: string }> = ({ part, onAttempt, questionText, pdfSummary }) => {
     const [userAnswer, setUserAnswer] = useState('');
     const [isAttempted, setIsAttempted] = useState(false);
@@ -71,14 +71,15 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
         setIsLoadingAiExplanation(true);
         try {
             const context = `Question Stem: ${questionText}\nSub-question: ${part.text}`;
-            const fetched = await getAIExplanation(context, part.answer, part.explanation, pdfSummary);
+            // Pass userAnswer to get tailored feedback
+            const fetched = await getAIExplanation(context, part.answer, part.explanation, pdfSummary, userAnswer);
             setAiExplanation(fetched);
         } catch (error) {
             setAiExplanation("Sorry, couldn't load an AI explanation at this time.");
         } finally {
             setIsLoadingAiExplanation(false);
         }
-    }, [aiExplanation, part, questionText, pdfSummary]);
+    }, [aiExplanation, part, questionText, pdfSummary, userAnswer]);
     
     const fetchIncorrectFeedback = useCallback(async () => {
         if (feedback) return;
@@ -105,7 +106,7 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
                 )}
                 {showOpenEnded && (
                     <div className="mt-3 text-sm animate-fade-in">
-                        <div className="p-4 bg-gray-50 rounded-lg max-w-none">
+                        <div className="p-4 bg-gray-50 rounded-lg max-w-none border border-gray-200">
                             <h4 className="font-bold text-gray-700 mb-2">Model Answer & Explanation</h4>
                             <MarkdownRenderer text={part.explanation || "No explanation provided."} />
                         </div>
@@ -146,31 +147,38 @@ const PracticePart: React.FC<{ part: QuestionPart; onAttempt: (isCorrect: boolea
 
             {isAttempted && (
                 <div className="mt-3 text-sm" >
-                    {!isCorrect && (
-                        <p className="font-semibold mb-3">Correct Answer: <span className="font-mono bg-green-100 text-green-800 px-1 rounded">{part.answer}</span></p>
+                    {isCorrect ? (
+                        <div className="p-3 bg-green-100 text-green-800 rounded-lg mb-3 font-semibold">
+                            Correct! Great job.
+                        </div>
+                    ) : (
+                        <div className="p-3 bg-red-100 text-red-800 rounded-lg mb-3">
+                            <p className="font-bold">Incorrect.</p>
+                            <p className="mt-1">Correct Answer: <span className="font-mono bg-white px-1 rounded border border-red-200">{part.answer}</span></p>
+                        </div>
                     )}
 
-                    <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <h4 className="font-bold text-gray-700 not-prose mb-2">Explanation</h4>
                         <MarkdownRenderer text={part.explanation} />
                     </div>
                     
                     <div className="mt-4 flex flex-wrap gap-4">
                         <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchAiExplanation(); }}>
-                            <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer animate-pulse-slow list-none">
+                            <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-sky-600 hover:bg-sky-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer animate-pulse-slow list-none">
                                 <SparklesIcon className="w-5 h-5" /> Need a better explanation? Ask AI Tutor
                             </summary>
-                            <div className="mt-2 p-4 bg-sky-50 rounded-lg">
+                            <div className="mt-2 p-4 bg-sky-50 rounded-lg border border-sky-200">
                                 {isLoadingAiExplanation ? "Loading AI explanation..." : <MarkdownRenderer text={aiExplanation} />}
                             </div>
                         </details>
 
                         {!isCorrect && (
                             <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchIncorrectFeedback(); }}>
-                                <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer list-none">
+                                <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-orange-500 hover:bg-orange-600 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer list-none">
                                     <SparklesIcon className="w-5 h-5" /> Why was my answer wrong?
                                 </summary>
-                                <div className="mt-2 p-4 bg-orange-50 rounded-lg">
+                                <div className="mt-2 p-4 bg-orange-50 rounded-lg border border-orange-200">
                                     {isLoadingFeedback ? "Loading personalized feedback..." : <MarkdownRenderer text={feedback} />}
                                 </div>
                             </details>
@@ -201,13 +209,14 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
     const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
     const [timeLeft, setTimeLeft] = useState(exam.timeLimit * 60);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+    const [answeredStatus, setAnsweredStatus] = useState<Record<string, 'correct' | 'incorrect' | 'unanswered'>>({});
 
     const handleSubmit = useCallback((confirm = true) => {
         if (isPreview) {
             onExit();
             return;
         }
-        if (confirm && !window.confirm('Are you sure you want to submit your answers?')) {
+        if (confirm && mode === 'simulation' && !window.confirm('Are you sure you want to submit your answers?')) {
             return;
         }
 
@@ -216,7 +225,7 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
              questions.forEach(q => {
                 q.parts.forEach(p => {
                     const answer = userAnswers[p.id] || "";
-                    const isCorrect = answer.trim().toLowerCase() === p.answer.trim().toLowerCase();
+                    const isCorrect = String(answer).trim().toLowerCase() === p.answer.trim().toLowerCase();
                     onPartAttempt(p.id, exam.id, isCorrect);
                 });
             });
@@ -258,25 +267,59 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
         setUserAnswers(prev => ({ ...prev, [partId]: answer }));
     };
     
+    // Handler for Practice/Quiz attempts
+    const handlePartAttemptWrapper = (partId: string, isCorrect: boolean) => {
+        onPartAttempt(partId, exam.id, isCorrect);
+        
+        // Track local status for navigation
+        setAnsweredStatus(prev => ({
+            ...prev,
+            [partId]: isCorrect ? 'correct' : 'incorrect'
+        }));
+
+        // Quiz Mode Auto-Advance Logic
+        if (mode === 'quiz' && isCorrect) {
+            setTimeout(() => {
+                if (currentQnIndex < questions.length - 1) {
+                    setCurrentQnIndex(prev => prev + 1);
+                } else if (currentQnIndex === questions.length - 1) {
+                    // Optional: auto-submit or show a "Done" message if it's the last question
+                }
+            }, 1500);
+        }
+    };
+
     const totalParts = useMemo(() => questions.reduce((sum, q) => sum + q.parts.length, 0), [questions]);
-    const answeredPartsCount = useMemo(() => Object.values(userAnswers).filter(ans => ans.trim() !== '').length, [userAnswers]);
+    const answeredPartsCount = useMemo(() => {
+        if (mode === 'simulation') {
+            return Object.values(userAnswers).filter(ans => String(ans).trim() !== '').length;
+        }
+        // For practice/quiz, track actual attempts
+        return Object.keys(answeredStatus).length;
+    }, [userAnswers, answeredStatus, mode]);
 
     const score = useMemo(() => {
         if (isPreview) return 0;
         let correctCount = 0;
-        questions.forEach(q => {
-            q.parts.forEach(p => {
-                // FIX: Handle case where userAnswers[p.id] is undefined by providing a default empty string.
-                if ((userAnswers[p.id] || '').trim().toLowerCase() === p.answer.trim().toLowerCase()) {
-                    correctCount++;
-                }
+        if (mode === 'simulation') {
+            questions.forEach(q => {
+                q.parts.forEach(p => {
+                    const userAnswerForPart = userAnswers[p.id] || '';
+                    if (String(userAnswerForPart).trim().toLowerCase() === p.answer.trim().toLowerCase()) {
+                        correctCount++;
+                    }
+                });
             });
-        });
+        } else {
+            // For practice/quiz, calculate from status
+            correctCount = Object.values(answeredStatus).filter(s => s === 'correct').length;
+        }
         return correctCount;
-    }, [userAnswers, questions, isPreview]);
+    }, [userAnswers, questions, isPreview, mode, answeredStatus]);
     
     const finishAndExit = () => {
-        onExit(mode === 'simulation' ? { score, total: totalParts } : undefined);
+        // Pass result even for practice/quiz now
+        onExit({ score, total: totalParts });
     };
 
     const formatTime = (seconds: number) => {
@@ -308,7 +351,7 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
 
     if (status === 'submitted' || status === 'reviewing') {
         const reviewedQuestion = questions[reviewQnIndex];
-        const incorrectCount = answeredPartsCount - score;
+        const incorrectCount = totalParts - score; 
         const unansweredCount = totalParts - answeredPartsCount;
 
         return (
@@ -382,9 +425,48 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
                     <p className="font-semibold">You are in Preview Mode. Answers will not be saved.</p>
                 </div>
             )}
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            
+            {/* Visual Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
                 <div className="bg-sky-600 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.3s ease-in-out' }}></div>
             </div>
+            
+            {/* Question Navigator */}
+            <div className="mb-6 overflow-x-auto whitespace-nowrap py-2 hide-scrollbar">
+                <div className="inline-flex gap-2">
+                    {questions.map((q, idx) => {
+                        // Determine status for this question
+                        // For simplicity in mixed mode, if ALL parts are answered correct -> green, if ANY incorrect -> red, else gray/blue
+                        let qStatus = 'unanswered';
+                        if (mode === 'simulation') {
+                            const hasAnswer = q.parts.some(p => userAnswers[p.id]?.trim());
+                            qStatus = hasAnswer ? 'answered' : 'unanswered';
+                        } else {
+                            const statuses = q.parts.map(p => answeredStatus[p.id]);
+                            if (statuses.every(s => s === 'correct')) qStatus = 'correct';
+                            else if (statuses.some(s => s === 'incorrect')) qStatus = 'incorrect';
+                            else if (statuses.some(s => s === 'correct')) qStatus = 'partial'; // Some parts correct, others not done
+                        }
+
+                        let colorClass = 'bg-gray-200 text-gray-600 border-gray-300';
+                        if (idx === currentQnIndex) colorClass = 'ring-2 ring-sky-500 ring-offset-1 bg-white text-sky-700 border-sky-500';
+                        else if (qStatus === 'correct') colorClass = 'bg-green-500 text-white border-green-600';
+                        else if (qStatus === 'incorrect') colorClass = 'bg-red-500 text-white border-red-600';
+                        else if (qStatus === 'answered' || qStatus === 'partial') colorClass = 'bg-sky-100 text-sky-700 border-sky-300';
+
+                        return (
+                            <button 
+                                key={q.id}
+                                onClick={() => setCurrentQnIndex(idx)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${colorClass}`}
+                            >
+                                {idx + 1}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
             <header className="flex justify-between items-center mb-4">
                  <div>
                     <h1 className="text-xl sm:text-2xl font-bold">{exam.title} - {exam.year}</h1>
@@ -445,7 +527,7 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
                            <PracticePart 
                                 key={part.id} 
                                 part={part} 
-                                onAttempt={(isCorrect) => onPartAttempt(part.id, exam.id, isCorrect)}
+                                onAttempt={(isCorrect) => handlePartAttemptWrapper(part.id, isCorrect)}
                                 questionText={currentQuestion.text} 
                                 pdfSummary={exam.pdfSummary} 
                            />
@@ -460,8 +542,8 @@ const ExamPage: React.FC<ExamPageProps> = ({ exam, onExit, mode, isPreview = fal
                 </button>
                 
                 {currentQnIndex === questions.length - 1 ? (
-                     <button onClick={() => (mode === 'simulation' ? handleSubmit(true) : onExit())} className="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700">
-                        {mode === 'simulation' ? (isPreview ? 'End Preview' : 'Submit Exam') : 'Finish Practice'}
+                     <button onClick={() => (mode === 'simulation' ? handleSubmit(true) : finishAndExit())} className="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700">
+                        {mode === 'simulation' ? (isPreview ? 'End Preview' : 'Submit Exam') : 'Finish Session'}
                     </button>
                 ) : (
                     <button onClick={() => setCurrentQnIndex(i => Math.min(questions.length - 1, i + 1))} className="flex items-center gap-2 bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-sky-700">

@@ -1,10 +1,12 @@
-
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import PerformanceCharts from '../components/PerformanceCharts';
 import RecentActivity from '../components/RecentActivity';
 import LinkAccountCard from '../components/LinkAccountCard';
 import SubscriptionCard from '../components/SubscriptionCard';
-import { User, LinkRequest, LinkedAccount } from '../types';
+import CommunityForumCard from '../components/CommunityForumCard';
+import ForumPage from './ForumPage';
+import { User, LinkRequest, LinkedAccount, ForumCategory, ForumPost, ForumReply } from '../types';
+import NewPostModal from '../components/NewPostModal';
 
 interface ParentDashboardProps {
     currentUser: User;
@@ -15,10 +17,18 @@ interface ParentDashboardProps {
     onAcceptRequest: (requestId: string) => void;
     onDeclineRequest: (requestId: string) => void;
     onUnlink: (userId1: string, userId2: string) => void;
+    // Forum Props
+    forumCategories: ForumCategory[];
+    forumPosts: ForumPost[];
+    forumReplies: ForumReply[];
+    onSavePost: (post: ForumPost) => void;
+    onSaveReply: (reply: ForumReply) => void;
 }
 
 const ParentDashboard: React.FC<ParentDashboardProps> = (props) => {
-  const { currentUser } = props;
+  const { currentUser, onSavePost } = props;
+  const [showForum, setShowForum] = useState(false);
+  const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
 
   const linkedStudent = useMemo(() => {
     const link = props.linkedAccounts.find(l => l.userId1 === currentUser.id || l.userId2 === currentUser.id);
@@ -26,12 +36,23 @@ const ParentDashboard: React.FC<ParentDashboardProps> = (props) => {
     const studentId = link.userId1 === currentUser.id ? link.userId2 : link.userId1;
     return props.allUsers.find(u => u.id === studentId && u.role === 'student');
   }, [props.linkedAccounts, props.allUsers, currentUser.id]);
+  
+  if (showForum) {
+      return <ForumPage onBackToDashboard={() => setShowForum(false)} {...props} />;
+  }
+  
+  const handleSaveAndCloseModal = (post: ForumPost) => {
+      onSavePost(post);
+      setIsNewPostModalOpen(false);
+  };
 
   return (
+    <>
     <div className="p-4 sm:p-6 lg:p-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-6">Parent Dashboard</h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2 space-y-8">
+                <CommunityForumCard onNavigate={() => setShowForum(true)} onNewPost={() => setIsNewPostModalOpen(true)} />
                 <div className="p-6 bg-white rounded-xl shadow-sm">
                     <h3 className="text-xl font-bold text-gray-800 mb-4">
                         {linkedStudent ? `${linkedStudent.name}'s Performance` : "Your Child's Performance"}
@@ -68,6 +89,15 @@ const ParentDashboard: React.FC<ParentDashboardProps> = (props) => {
             </div>
         </div>
     </div>
+    {isNewPostModalOpen && (
+        <NewPostModal 
+            categories={props.forumCategories}
+            currentUser={currentUser}
+            onSave={handleSaveAndCloseModal}
+            onClose={() => setIsNewPostModalOpen(false)}
+        />
+    )}
+    </>
   );
 };
 

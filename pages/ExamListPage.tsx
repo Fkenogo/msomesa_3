@@ -1,15 +1,14 @@
-
 import React, { useState, useMemo } from 'react';
 import PublicLayout from '../components/PublicLayout';
-import { DocumentTextIcon, SparklesIcon } from '../components/icons';
-import { Exam, EducationLevel } from '../types';
+import { DocumentTextIcon, SparklesIcon, ShareIcon } from '../components/icons';
+import { Exam, EducationLevel, AuthMode } from '../types';
 
 type PublicPage = 'landing' | 'past-papers' | 'practice-papers' | 'pricing';
 
 interface ExamListPageProps {
     pageType: 'Past Paper' | 'Practice Paper';
     allExams: Exam[];
-    onNavigateToAuth: () => void;
+    onNavigateToAuth: (mode?: AuthMode) => void;
     onNavigate: (page: PublicPage) => void;
 }
 
@@ -28,6 +27,8 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ pageType, allExams, onNavig
     const [selectedLevel, setSelectedLevel] = useState<EducationLevel | 'All'>('All');
     const [selectedSubject, setSelectedSubject] = useState<string>('All');
     const [selectedYear, setSelectedYear] = useState<string>('All');
+    const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const papersForType = useMemo(() => allExams.filter(e => e.type === pageType), [allExams, pageType]);
 
@@ -39,13 +40,40 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ pageType, allExams, onNavig
     }, [selectedLevel, papersForType]);
 
     const filteredPapers = useMemo(() => {
+        const lowercasedQuery = searchQuery.toLowerCase().trim();
         return papersForType.filter(paper => {
             const levelMatch = selectedLevel === 'All' || paper.level === selectedLevel;
             const subjectMatch = selectedSubject === 'All' || paper.subject === selectedSubject;
             const yearMatch = selectedYear === 'All' || paper.year.toString() === selectedYear;
-            return levelMatch && subjectMatch && yearMatch;
+            const difficultyMatch = selectedDifficulty === 'All' || paper.difficulty === selectedDifficulty;
+            
+            const searchMatch = !lowercasedQuery ||
+                paper.title.toLowerCase().includes(lowercasedQuery) ||
+                paper.subject.toLowerCase().includes(lowercasedQuery) ||
+                paper.year.toString().includes(lowercasedQuery);
+
+            return levelMatch && subjectMatch && yearMatch && difficultyMatch && searchMatch;
         });
-    }, [papersForType, selectedLevel, selectedSubject, selectedYear]);
+    }, [papersForType, selectedLevel, selectedSubject, selectedYear, selectedDifficulty, searchQuery]);
+
+    const handleShare = async (exam: Exam) => {
+        const shareData = {
+            title: `Msomesa Exam: ${exam.title}`,
+            text: `Check out this exam paper, "${exam.title} (${exam.year})", on Msomesa! It's a great resource for exam prep.`,
+            url: window.location.href, // Using current page URL as a placeholder
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+                alert('Link copied to clipboard! You can now share it.');
+            }
+        } catch (err) {
+            console.error('Error sharing:', err);
+            // This can happen if the user cancels the share dialog, so no need for an aggressive alert.
+        }
+    };
 
     return (
         <PublicLayout onNavigateToAuth={onNavigateToAuth} onNavigate={onNavigate}>
@@ -57,10 +85,10 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ pageType, allExams, onNavig
 
                 {/* Filters */}
                 <div className="p-6 bg-white rounded-xl shadow-md border border-gray-200 mb-8 sticky top-20 z-40">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="md:col-span-4">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Find Exams by Your Level</label>
-                             <div className="flex flex-wrap justify-center gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        <div className="md:col-span-5">
+                            <label className="block text-sm font-bold text-gray-700 mb-2 text-center md:text-left">Find Exams by Your Level</label>
+                             <div className="flex flex-wrap justify-center md:justify-start gap-2">
                                 {(['All', 'PLE', 'UCE', 'UACE'] as const).map(level => (
                                     <button key={level} onClick={() => setSelectedLevel(level)} className={`px-6 py-2 rounded-full font-semibold transition-colors text-sm sm:text-base ${selectedLevel === level ? 'bg-[#6C5CE7] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
                                         {level}
@@ -68,16 +96,36 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ pageType, allExams, onNavig
                                 ))}
                             </div>
                         </div>
-                         <div className="col-span-1 md:col-span-2">
+                        <div className="col-span-1 md:col-span-2">
+                            <label htmlFor="search-filter" className="block text-sm font-medium text-gray-700">Search Exams</label>
+                            <input
+                                id="search-filter"
+                                type="search"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="e.g., Mathematics, 2023..."
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                            />
+                        </div>
+                         <div className="col-span-1 md:col-span-1">
                             <label htmlFor="subject-filter" className="block text-sm font-medium text-gray-700">Subject</label>
                             <select id="subject-filter" value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                                 {availableSubjects.map(s => <option key={s}>{s}</option>)}
                             </select>
                         </div>
-                        <div className="col-span-1 md:col-span-2">
+                        <div className="col-span-1 md:col-span-1">
                              <label htmlFor="year-filter" className="block text-sm font-medium text-gray-700">Year</label>
                              <select id="year-filter" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                                 {availableYears.map(y => <option key={y}>{y}</option>)}
+                            </select>
+                        </div>
+                        <div className="col-span-1 md:col-span-1">
+                            <label htmlFor="difficulty-filter" className="block text-sm font-medium text-gray-700">Difficulty</label>
+                            <select id="difficulty-filter" value={selectedDifficulty} onChange={(e) => setSelectedDifficulty(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="All">All</option>
+                                <option value="Easy">Easy</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Hard">Hard</option>
                             </select>
                         </div>
                     </div>
@@ -101,9 +149,14 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ pageType, allExams, onNavig
                                         <p className="text-sm text-gray-500 mt-1">{paper.description}</p>
                                     </div>
                                 </div>
-                                <button onClick={onNavigateToAuth} className="mt-3 sm:mt-0 ml-0 sm:ml-4 bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors text-sm flex-shrink-0">
-                                    Start Exam
-                                </button>
+                                <div className="mt-3 sm:mt-0 ml-0 sm:ml-4 flex items-center gap-2 flex-shrink-0">
+                                    <button onClick={() => handleShare(paper)} title="Share this exam" className="p-2 text-gray-500 rounded-full hover:bg-gray-100 hover:text-sky-600 transition-colors">
+                                        <ShareIcon className="w-5 h-5" />
+                                    </button>
+                                    <button onClick={() => onNavigateToAuth()} className="bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors text-sm">
+                                        Start Exam
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>

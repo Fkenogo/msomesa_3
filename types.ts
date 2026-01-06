@@ -1,6 +1,7 @@
 export type EducationLevel = 'PLE' | 'UCE' | 'UACE';
 export type UserRole = 'student' | 'parent' | 'school' | 'admin';
-export type ExamMode = 'practice' | 'simulation';
+export type ExamMode = 'practice' | 'simulation' | 'quiz';
+export type AuthMode = 'login' | 'signup-student' | 'signup-parent' | 'signup-school';
 
 export interface StudyReminder {
     id: string;
@@ -135,4 +136,36 @@ export interface Notification {
     text: string;
     date: string;
     read: boolean;
+}
+
+
+// --- Forum Types ---
+
+export interface ForumCategory {
+    id: string;
+    name: string;
+    description: string;
+    icon: 'general' | 'tips' | 'school' | 'feedback';
+}
+
+export interface ForumPost {
+    id: string;
+    categoryId: string;
+    title: string;
+    content: string;
+    authorId: string;
+    createdAt: string; // ISO date string
+    isPinned: boolean;
+    isLocked: boolean;
+    tags?: string[];
+    views?: number;
+}
+
+export interface ForumReply {
+    id: string;
+    postId: string;
+    parentId: string | null;
+    content: string;
+    authorId: string;
+    createdAt: string; // ISO date string
 }

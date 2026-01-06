@@ -1,4 +1,3 @@
-
 import React, { useState, FormEvent } from 'react';
 import { User, UserRole, EducationLevel, AuthMode } from '../types';
 import { SparklesIcon, BookOpenIcon, UsersIcon, BuildingOfficeIcon, GoogleIcon } from '../components/icons';
@@ -34,8 +33,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onAuth, onBackToHome, initialMode
         }
 
         const newUser: Partial<User> = {
-            name: formData.get('name') as string || formData.get('schoolName') as string || formData.get('email') as string,
-            email: formData.get('email') as string,
+            name: (formData.get('name') as string || formData.get('schoolName') as string || formData.get('email') as string).trim(),
+            email: (formData.get('email') as string).trim(),
             password: password,
             role: role,
             level: formData.get('level') as EducationLevel,
@@ -51,17 +50,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onAuth, onBackToHome, initialMode
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const loginAttempt: Partial<User> = {
-            email: formData.get('email') as string,
+            email: (formData.get('email') as string).trim(),
             password: formData.get('password') as string,
         };
         onAuth(loginAttempt);
     };
 
     const handleGoogleSignIn = () => {
-        // This simulates a successful Google sign-in.
-        // In a real app, this would trigger the Google OAuth flow.
         onAuth({ 
-            email: 'student.google@msomesa.com', // Pre-defined for simulation
+            email: 'student.google@msomesa.com',
             name: 'Alex Google',
             authProvider: 'google' 
         });
@@ -86,7 +83,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onAuth, onBackToHome, initialMode
                         <button
                             type="button"
                             onClick={handleGoogleSignIn}
-                            className="w-full flex items-center justify-center gap-3 py-2.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors shadow-sm"
+                            className="w-full flex items-center justify-center gap-3 py-2.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors shadow-sm bg-white"
                         >
                             <GoogleIcon className="w-5 h-5" />
                             <span className="text-sm font-semibold text-gray-700">Continue with Google</span>
@@ -101,7 +98,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onAuth, onBackToHome, initialMode
 
 
                     {mode === 'login' && (
-                        <form onSubmit={handleLoginFormSubmit} className="space-y-4">
+                        <form onSubmit={handleLoginFormSubmit} className="space-y-4 mt-4">
                             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">Sign in with your email</h2>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600">Email</label>
@@ -111,12 +108,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onAuth, onBackToHome, initialMode
                                 <label className="block text-sm font-medium text-gray-600">Password</label>
                                 <input type="password" name="password" required className="mt-1 w-full input-style" />
                             </div>
-                            <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition-colors">Login</button>
+                            <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition-colors font-bold mt-2">Login</button>
                         </form>
                     )}
 
                     {mode.startsWith('signup') && (
-                        <div>
+                        <div className="mt-4">
                             <div className="grid grid-cols-3 gap-2 mb-6">
                                 <RoleButton icon={<BookOpenIcon className="w-5 h-5"/>} label="Student" active={mode === 'signup-student'} onClick={() => setMode('signup-student')} />
                                 <RoleButton icon={<UsersIcon className="w-5 h-5"/>} label="Parent" active={mode === 'signup-parent'} onClick={() => setMode('signup-parent')} />
@@ -140,7 +137,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onAuth, onBackToHome, initialMode
 };
 
 const RoleButton: React.FC<{icon: React.ReactNode; label: string; active: boolean; onClick: () => void;}> = ({ icon, label, active, onClick }) => (
-    <button type="button" onClick={onClick} className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${active ? 'bg-sky-100 border-sky-500 text-sky-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300'}`}>
+    <button type="button" onClick={onClick} className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${active ? 'bg-sky-100 border-sky-50 text-sky-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300'}`}>
         {icon}
         <span className="text-xs font-semibold mt-1">{label}</span>
     </button>
@@ -158,16 +155,16 @@ const StudentSignupForm: React.FC<{ onSubmit: (e: FormEvent<HTMLFormElement>, ro
         <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">Create Student Account</h2>
         <input name="name" placeholder="Full Name" required className="w-full input-style" />
         <input name="school" placeholder="School Name" required className="w-full input-style" />
-        <select name="level" required className="w-full input-style">
+        <select name="level" required className="w-full input-style bg-white">
             <option value="">Select Grade Level</option>
             <option value="PLE">PLE</option>
             <option value="UCE">UCE</option>
             <option value="UACE">UACE</option>
         </select>
-        <input type="date" name="dob" placeholder="Date of Birth" required className="w-full input-style text-gray-500" />
+        <input type="date" name="dob" placeholder="Date of Birth" required className="w-full input-style text-gray-900" />
         <input type="email" name="email" placeholder="Email Address" required className="w-full input-style" />
         <PasswordFields />
-        <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700">Sign Up</button>
+        <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 font-bold">Sign Up</button>
     </form>
 );
 
@@ -178,7 +175,7 @@ const ParentSignupForm: React.FC<{ onSubmit: (e: FormEvent<HTMLFormElement>, rol
         <input type="email" name="email" placeholder="Email Address" required className="w-full input-style" />
         <input type="tel" name="phone" placeholder="Phone Number" required className="w-full input-style" />
         <PasswordFields />
-        <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700">Sign Up</button>
+        <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 font-bold">Sign Up</button>
     </form>
 );
 
@@ -190,12 +187,11 @@ const SchoolSignupForm: React.FC<{ onSubmit: (e: FormEvent<HTMLFormElement>, rol
         <input type="email" name="email" placeholder="Official Email" required className="w-full input-style" />
         <input type="tel" name="phone" placeholder="Contact Number" required className="w-full input-style" />
         <PasswordFields />
-        <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700">Register</button>
+        <button type="submit" className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 font-bold">Register</button>
     </form>
 );
 
 
-// Add some simple CSS for form inputs and animations
 const style = document.createElement('style');
 style.innerHTML = `
 .input-style {
@@ -203,6 +199,8 @@ style.innerHTML = `
     border: 1px solid #d1d5db;
     border-radius: 0.375rem;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background-color: white !important;
+    color: #111827 !important;
 }
 .input-style:focus {
     outline: none;

@@ -81,24 +81,36 @@ const StepByStepRenderer: React.FC<{ text: string }> = ({ text }) => {
 const OriginalMarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
-  let listItems: string[] = [];
+  let ulistItems: string[] = [];
+  let olistItems: string[] = [];
   let paragraphLines: string[] = [];
 
-  const flushList = () => {
-    if (listItems.length > 0) {
+  const flushUList = () => {
+    if (ulistItems.length > 0) {
       elements.push(
-        <ul key={`list-${elements.length}`} className="list-disc pl-5 space-y-1 my-2">
-          {listItems.map((item, i) => <li key={i} className="ml-2">{renderInlineFormatting(item)}</li>)}
+        <ul key={`ulist-${elements.length}`} className="list-disc pl-5 space-y-1">
+          {ulistItems.map((item, i) => <li key={i}>{renderInlineFormatting(item)}</li>)}
         </ul>
       );
-      listItems = [];
+      ulistItems = [];
+    }
+  };
+
+  const flushOList = () => {
+    if (olistItems.length > 0) {
+      elements.push(
+        <ol key={`olist-${elements.length}`} className="list-decimal pl-5 space-y-2">
+          {olistItems.map((item, i) => <li key={i}>{renderInlineFormatting(item)}</li>)}
+        </ol>
+      );
+      olistItems = [];
     }
   };
 
   const flushParagraph = () => {
     if (paragraphLines.length > 0) {
         elements.push(
-            <p key={`para-${elements.length}`} className="my-2">
+            <p key={`para-${elements.length}`}>
                 {paragraphLines.map((line, i) => (
                     <React.Fragment key={i}>
                         {renderInlineFormatting(line)}
@@ -111,34 +123,48 @@ const OriginalMarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
     }
   };
 
+  const flushAll = () => {
+    flushUList();
+    flushOList();
+    flushParagraph();
+  };
+
   lines.forEach((line) => {
     const trimmedLine = line.trim();
 
-    if (trimmedLine.startsWith('### ')) {
-      flushList();
-      flushParagraph();
+    if (trimmedLine.startsWith('###')) {
+      flushAll();
       elements.push(
-        <h3 key={`h3-${elements.length}`} className="text-lg font-bold mt-4 mb-2">
-          {renderInlineFormatting(trimmedLine.substring(4))}
+        <h3 key={`h3-${elements.length}`}>
+          {renderInlineFormatting(trimmedLine.replace(/^###\s*/, ''))}
         </h3>
       );
-    } else if (trimmedLine.startsWith('* ')) {
+    } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
+      flushOList();
       flushParagraph();
-      listItems.push(trimmedLine.substring(2));
-    } else if (trimmedLine === '') {
-      flushList();
+      ulistItems.push(trimmedLine.substring(2));
+    } else if (trimmedLine.match(/^\d+\.\s/)) {
+      flushUList();
       flushParagraph();
+      olistItems.push(trimmedLine.replace(/^\d+\.\s/, ''));
+    } else if (trimmedLine.trim() === '---') {
+      flushAll();
+      elements.push(<hr key={`hr-${elements.length}`} />);
+    } else if (trimmedLine.trim() === '') {
+      flushAll();
     } else {
-      flushList();
-      paragraphLines.push(trimmedLine);
+      flushUList();
+      flushOList();
+      paragraphLines.push(line);
     }
   });
 
-  flushList();
-  flushParagraph();
+  flushAll();
 
-  return <div className="prose prose-sm max-w-none">{elements}</div>;
+  // The `prose` class will handle styling for children elements.
+  return <div className="prose max-w-none prose-sm sm:prose-base">{elements}</div>;
 };
+
 
 interface MarkdownRendererProps {
   text: string | null;

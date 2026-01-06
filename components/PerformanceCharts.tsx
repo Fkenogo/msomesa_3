@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import Card from './Card';
@@ -25,24 +24,26 @@ const scoreTrendData = [
 
 const PerformanceCharts: React.FC = () => {
   return (
-    <>
+    <div className="space-y-6">
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <Card className="lg:col-span-3">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Performance by Subject</h2>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={subjectData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
-              <YAxis tick={{ fill: '#6b7280' }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}
-                cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }}
-              />
-              <Legend />
-              <Bar dataKey="average" fill="#0ea5e9" name="Average Score (%)" barSize={30} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="h-80 w-full relative">
+          <div className="absolute inset-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={subjectData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
+                <YAxis tick={{ fill: '#6b7280' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}
+                  cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }}
+                />
+                <Legend />
+                <Bar dataKey="average" fill="#0ea5e9" name="Average Score (%)" barSize={30} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </Card>
        <Card className="lg:col-span-2">
@@ -51,26 +52,29 @@ const PerformanceCharts: React.FC = () => {
             <ArrowTrendingUpIcon className="w-5 h-5"/>
             <p className="text-sm font-semibold">Improvement: ↑ 5% from last period</p>
         </div>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={scoreTrendData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
-              <YAxis tick={{ fill: '#6b7280' }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}
-                cursor={{ stroke: '#0ea5e9', strokeWidth: 1 }}
-              />
-              <Line type="monotone" dataKey="score" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 5, fill: '#0ea5e9' }} activeDot={{ r: 8 }} name="Average Score (%)" />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="h-72 w-full relative">
+          <div className="absolute inset-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={scoreTrendData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
+                <YAxis tick={{ fill: '#6b7280' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}
+                  cursor={{ stroke: '#0ea5e9', strokeWidth: 1 }}
+                />
+                <Line type="monotone" dataKey="score" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 5, fill: '#0ea5e9' }} activeDot={{ r: 8 }} name="Average Score (%)" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </Card>
     </div>
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <Card className="lg:col-span-2">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Study Time Breakdown</h2>
-            <div className="h-64">
+            <div className="h-64 w-full relative">
+              <div className="absolute inset-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie data={mockStudyTime} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
@@ -80,6 +84,7 @@ const PerformanceCharts: React.FC = () => {
                         <Legend />
                     </PieChart>
                 </ResponsiveContainer>
+              </div>
             </div>
         </Card>
          <Card className="lg:col-span-3">
@@ -102,7 +107,7 @@ const PerformanceCharts: React.FC = () => {
             </ul>
         </Card>
     </div>
-    </>
+    </div>
   );
 };
 

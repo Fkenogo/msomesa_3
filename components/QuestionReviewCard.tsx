@@ -24,14 +24,15 @@ const PartReview: React.FC<{ part: QuestionPart; userAnswer: string; questionTex
         setIsLoadingAiExplanation(true);
         try {
             const context = `Question Stem: ${questionText}\nSub-question: ${part.text}`;
-            const fetchedExplanation = await getAIExplanation(context, part.answer, part.explanation, pdfSummary);
+            // Pass userAnswer to get a targeted explanation
+            const fetchedExplanation = await getAIExplanation(context, part.answer, part.explanation, pdfSummary, userAnswer);
             setAiExplanation(fetchedExplanation);
         } catch (error) {
             setAiExplanation("Sorry, couldn't load an explanation.");
         } finally {
             setIsLoadingAiExplanation(false);
         }
-    }, [aiExplanation, part, questionText, pdfSummary]);
+    }, [aiExplanation, part, questionText, pdfSummary, userAnswer]);
 
     const fetchIncorrectFeedback = useCallback(async () => {
         if (feedback) return;
@@ -78,27 +79,27 @@ const PartReview: React.FC<{ part: QuestionPart; userAnswer: string; questionTex
                 </div>
             )}
 
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="font-bold text-gray-700 mb-2">Explanation</h4>
                 <MarkdownRenderer text={part.explanation || "No standard explanation provided for this question."} />
             </div>
 
             <div className="mt-4 text-sm flex items-center gap-4 flex-wrap">
                 <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchAiExplanation(); }}>
-                    <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer animate-pulse-slow list-none">
+                    <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-sky-600 hover:bg-sky-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer animate-pulse-slow list-none">
                         <SparklesIcon className="w-5 h-5" /> Need a better explanation? Ask AI Tutor
                     </summary>
-                    <div className="mt-2 p-4 bg-sky-50 rounded-lg">
+                    <div className="mt-2 p-4 bg-sky-50 rounded-lg border border-sky-200">
                         {isLoadingAiExplanation ? "Loading AI explanation..." : <MarkdownRenderer text={aiExplanation} />}
                     </div>
                 </details>
 
                 {!isCorrect && (
                     <details onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) fetchIncorrectFeedback(); }}>
-                        <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer list-none">
+                        <summary className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white bg-orange-500 hover:bg-orange-600 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer list-none">
                              <SparklesIcon className="w-5 h-5" /> Why was my answer wrong?
                         </summary>
-                         <div className="mt-2 p-4 bg-orange-50 rounded-lg">
+                         <div className="mt-2 p-4 bg-orange-50 rounded-lg border border-orange-200">
                              {isLoadingFeedback ? "Loading personalized feedback..." : <MarkdownRenderer text={feedback} />}
                         </div>
                     </details>

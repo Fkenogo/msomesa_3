@@ -1,12 +1,12 @@
-
 import React from 'react';
 import { SparklesIcon } from './icons';
+import { AuthMode } from '../types';
 
 type PublicPage = 'landing' | 'past-papers' | 'practice-papers' | 'pricing';
 
 interface PublicLayoutProps {
     children: React.ReactNode;
-    onNavigateToAuth: () => void;
+    onNavigateToAuth: (mode?: AuthMode) => void;
     onNavigate: (page: PublicPage) => void;
 }
 
@@ -25,10 +25,11 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onNavigateToAuth,
                          <button onClick={() => onNavigate('past-papers')} className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7] transition-colors">Past Papers</button>
                          <button onClick={() => onNavigate('practice-papers')} className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7] transition-colors">Practice Papers</button>
                          <button onClick={() => onNavigate('pricing')} className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7] transition-colors">Pricing</button>
+                         <button onClick={() => onNavigateToAuth('signup-parent')} className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7] transition-colors">Parent Forum</button>
                     </nav>
                     <div className="flex items-center gap-2">
-                        <button onClick={onNavigateToAuth} className="text-sm font-semibold text-[#2D98DA] hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">Sign In</button>
-                        <button onClick={onNavigateToAuth} className="text-sm font-semibold bg-[#6C5CE7] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all shadow-md hover:shadow-lg">Get Started</button>
+                        <button onClick={() => onNavigateToAuth('login')} className="text-sm font-semibold text-[#2D98DA] hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">Sign In</button>
+                        <button onClick={() => onNavigateToAuth()} className="text-sm font-semibold bg-[#6C5CE7] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all shadow-md hover:shadow-lg">Get Started</button>
                     </div>
                 </div>
             </header>
@@ -60,7 +61,6 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onNavigateToAuth,
 };
 
 
-// FIX: Destructure onNavigate from props to make it available in the component.
 const FooterLinks: React.FC<{title: string, links: string[], onNavigate: (page: PublicPage) => void}> = ({ title, links, onNavigate }) => {
     const handleFooterClick = (link: string) => {
         const page = link.toLowerCase().replace(' ', '-') as PublicPage;

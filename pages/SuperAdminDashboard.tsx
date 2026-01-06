@@ -1,9 +1,9 @@
-
 import React from 'react';
-import { User, Exam } from '../types';
+import { User, Exam, ForumCategory, ForumPost } from '../types';
 import Card from '../components/Card';
 import UserManagementCard from '../components/UserManagementCard';
 import ExamManagementCard from '../components/ExamManagementCard';
+import CommunityManagementCard from '../components/CommunityManagementCard';
 import { UsersIcon, DocumentTextIcon, ChartBarIcon } from '../components/icons';
 
 interface SuperAdminDashboardProps {
@@ -16,19 +16,28 @@ interface SuperAdminDashboardProps {
     onSaveExam: (exam: Exam) => void;
     onDeleteExam: (examId: string) => void;
     onPreviewExam: (examId: string) => void;
+    // Forum Admin Props
+    forumCategories: ForumCategory[];
+    forumPosts: ForumPost[];
+    onSaveCategory: (category: ForumCategory) => void;
+    onDeleteCategory: (categoryId: string) => void;
+    onDeletePost: (postId: string) => void;
+    onTogglePostPin: (postId: string) => void;
+    onTogglePostLock: (postId: string) => void;
+    onImpersonate: (user: User) => void;
 }
 
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
   const { 
     exams, allUsers, onPdfUpload,
     onSaveUser, onDeleteUser, onSaveExam, onDeleteExam,
-    onPreviewExam
+    onPreviewExam, onImpersonate
   } = props;
 
   const adminStats = [
     { name: 'Total Users', value: allUsers.length.toString(), icon: UsersIcon, color: 'text-sky-500' },
     { name: 'Total Exams', value: exams.length.toString(), icon: DocumentTextIcon, color: 'text-green-500' },
-    { name: 'Exams Taken (24h)', value: '452', icon: ChartBarIcon, color: 'text-indigo-500' },
+    { name: 'Total Forum Posts', value: props.forumPosts.length.toString(), icon: ChartBarIcon, color: 'text-indigo-500' },
 ];
 
   return (
@@ -53,13 +62,23 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
         </div>
 
         <div className="space-y-8">
-            <UserManagementCard allUsers={allUsers} onSaveUser={onSaveUser} onDeleteUser={onDeleteUser} />
+            <UserManagementCard allUsers={allUsers} onSaveUser={onSaveUser} onDeleteUser={onDeleteUser} onImpersonate={onImpersonate} />
             <ExamManagementCard 
               exams={exams} 
               onPdfUpload={onPdfUpload} 
               onSaveExam={onSaveExam} 
               onDeleteExam={onDeleteExam}
               onPreviewExam={onPreviewExam}
+            />
+            <CommunityManagementCard
+                categories={props.forumCategories}
+                posts={props.forumPosts}
+                users={props.allUsers}
+                onSaveCategory={props.onSaveCategory}
+                onDeleteCategory={props.onDeleteCategory}
+                onDeletePost={props.onDeletePost}
+                onTogglePin={props.onTogglePostPin}
+                onToggleLock={props.onTogglePostLock}
             />
         </div>
     </div>

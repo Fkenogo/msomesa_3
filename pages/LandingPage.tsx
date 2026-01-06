@@ -1,11 +1,11 @@
-
 import React from 'react';
-import { SparklesIcon, BookOpenIcon, ChartBarIcon, ArrowTrendingUpIcon, BuildingOfficeIcon, UsersIcon, WrenchIcon, AcademicCapIcon } from '../components/icons';
+import { SparklesIcon, BookOpenIcon, ChartBarIcon, ArrowTrendingUpIcon, BuildingOfficeIcon, UsersIcon, WrenchIcon, AcademicCapIcon, ChatBubbleLeftRightIcon } from '../components/icons';
 import PublicLayout from '../components/PublicLayout';
+import { AuthMode } from '../types';
 
 type PublicPage = 'landing' | 'past-papers' | 'practice-papers' | 'pricing';
 interface LandingPageProps {
-    onNavigateToAuth: () => void;
+    onNavigateToAuth: (mode?: AuthMode) => void;
     onNavigate: (page: PublicPage) => void;
 }
 
@@ -27,7 +27,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToAuth, onNavigate 
                         <p className="mt-6 text-lg text-gray-300 max-w-3xl mx-auto">
                             Your Ultimate Exam Prep Partner for PLE, UCE & UACE. Access thousands of past papers, receive instant feedback, and learn from detailed AI-powered explanations to boost your exam performance.
                         </p>
-                        <button onClick={onNavigateToAuth} className="mt-10 px-8 py-4 bg-gradient-to-r from-[#6C5CE7] to-[#2D98DA] text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-transform hover:scale-105 transform">
+                        <button onClick={() => onNavigateToAuth()} className="mt-10 px-8 py-4 bg-gradient-to-r from-[#6C5CE7] to-[#2D98DA] text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-transform hover:scale-105 transform">
                             Get Started
                         </button>
                          <p className="mt-4 text-sm text-gray-400">Start Learning for Free</p>
@@ -43,6 +43,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToAuth, onNavigate 
                              <StepCard number="1" title="Create Your Account" description="Quickly sign up as a student, parent, or school to get started." />
                              <StepCard number="2" title="Choose Your Exam" description="Select from a vast library of past papers and choose your study mode." />
                              <StepCard number="3" title="Learn & Improve" description="Get instant feedback, review explanations, and watch your scores climb." />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Parent Forum CTA Section */}
+                <section className="py-20 px-6 bg-sky-50">
+                    <div className="container mx-auto text-center">
+                        <div className="bg-white p-10 rounded-xl shadow-lg max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-8">
+                            <div className="flex-shrink-0">
+                                <div className="w-24 h-24 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center">
+                                    <ChatBubbleLeftRightIcon className="w-12 h-12" />
+                                </div>
+                            </div>
+                            <div className="text-left">
+                                <h2 className="text-3xl font-bold text-gray-800">Join Our Parent Community</h2>
+                                <p className="mt-2 text-gray-600">Connect with other parents, share exam preparation tips, discuss school choices, and get support on your child's educational journey in our exclusive parent-only forum.</p>
+                                <button onClick={() => onNavigateToAuth('signup-parent')} className="mt-6 px-6 py-3 bg-[#2D98DA] text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-transform hover:scale-105 transform">
+                                    Join the Conversation
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -83,7 +103,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToAuth, onNavigate 
                     <div className="container mx-auto text-center">
                         <h2 className="text-3xl font-bold">Ready to Ace Your Exams?</h2>
                         <p className="mt-2 max-w-xl mx-auto">Join thousands of students who have improved their exam scores with Msomesa.</p>
-                        <button onClick={onNavigateToAuth} className="mt-6 px-8 py-3 bg-white text-[#6C5CE7] font-bold rounded-lg shadow-lg hover:bg-gray-100 transition-transform hover:scale-105">
+                        <button onClick={() => onNavigateToAuth()} className="mt-6 px-8 py-3 bg-white text-[#6C5CE7] font-bold rounded-lg shadow-lg hover:bg-gray-100 transition-transform hover:scale-105">
                             Get Started Now
                         </button>
                     </div>
